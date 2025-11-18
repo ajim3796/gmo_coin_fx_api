@@ -41,7 +41,7 @@ class PublicAPI:
         if self.session:
             await self.session.close()
 
-    async def _request(self, method: str, endpoint: str, params: dict | None = None) -> dict | list:
+    async def _request(self, method: str, endpoint: str, params: dict | None = None) -> dict:
         """リクエストの共通処理関数
 
         Args:
@@ -86,9 +86,7 @@ class PublicAPI:
         ```
         """
         response = await self._request("GET", "/v1/status")
-        if not isinstance(response, dict):
-            raise TypeError("Expected response to be a dict, got something else.")
-        return response
+        return response.get("data", {})
 
     async def get_ticker(self) -> list:
         """全銘柄分の最新レートを取得します。
@@ -117,9 +115,7 @@ class PublicAPI:
         ```
         """
         response = await self._request("GET", "/v1/ticker")
-        if not isinstance(response, list):
-            raise TypeError("Expected response to be a list, got something else.")
-        return response
+        return response.get("data", [])
 
     async def get_klines(self, symbol: str, price_type: str, interval: str, date: str) -> list:
         """指定した銘柄の四本値を取得します。
@@ -160,9 +156,7 @@ class PublicAPI:
             "date": date,
         }
         response = await self._request("GET", "/v1/klines", params=params)
-        if not isinstance(response, list):
-            raise TypeError("Expected response to be a list, got something else.")
-        return response
+        return response.get("data", [])
 
     async def get_symbols(self) -> list:
         """取引ルールを取得します。
@@ -184,9 +178,7 @@ class PublicAPI:
         ```
         """
         response = await self._request("GET", "/v1/symbols")
-        if not isinstance(response, list):
-            raise TypeError("Expected response to be a list, got something else.")
-        return response
+        return response.get("data", [])
 
 
 class PrivateAPI:
@@ -194,14 +186,14 @@ class PrivateAPI:
     get_api_limiter = RateLimiter(max_calls=6, period=1)
     post_api_limiter = RateLimiter(max_calls=1, period=1)
 
-    def __init__(self, api_key: str | None = None, api_secret: str | None = None) -> None:
-        self.api_key: str = api_key or ""
-        self.secret_key: str = api_secret or ""
-        if not self.api_key or not self.secret_key:
-            raise ValueError("API_KEY and API_SECRET must be set in .env file")
+    def __init__(self, api_key: str | None = None, secret_key: str | None = None) -> None:
+        if api_key is None or secret_key is None:
+            raise ValueError("APIキーとシークレットキーは必須です。")
+        self.api_key: str = api_key
+        self.secret_key: str = secret_key
         self.session: niquests.AsyncSession | None = None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         self.session = niquests.AsyncSession()
         return self
 
@@ -210,7 +202,6 @@ class PrivateAPI:
             await self.session.close()
 
     def _generate_signature(self, timestamp: str, method: str, endpoint: str, req_body: dict | None = None) -> str:
-        assert self.secret_key is not None, "secret_keyが設定されていません。"
         if req_body:
             text = timestamp + method + endpoint + json.dumps(req_body)
         else:
@@ -306,7 +297,7 @@ class PrivateAPI:
         endpoint = "/v1/account/assets"
         headers = self._get_headers(method, endpoint)
         response = await self._request(method, endpoint, headers=headers)
-        return response.get("data") or []
+        return response.get("data", [])
 
     async def get_orders(self, orderId: str | None = None, rootOrderId: str | None = None) -> list:
         """指定した注文IDの注文情報を取得します。rootOrderId orderId いずれか1つが必須です。2つ同時には設定できません。
