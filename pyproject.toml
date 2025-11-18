@@ -1,0 +1,14 @@
+[project]
+name = "gmo-coin-fx-api"
+version = "0.1.0"
+description = "GMOコイン外国為替FX APIクライアント"
+readme = "README.md"
+authors = [
+    { name = "ajim", email = "n1a1o2k0i@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.9.9,<0.10.0"]
+build-backend = "uv_build"
