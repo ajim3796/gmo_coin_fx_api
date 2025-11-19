@@ -79,4 +79,4 @@ uv sync -U
 
 ## 作者
 
-- ajim (n1a1o2k0i@gmail.com)
+- ajim
