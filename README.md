@@ -8,9 +8,9 @@ GMOコインの外国為替FX APIクライアントライブラリです。
 
 ## 機能一覧
 
-各APIの詳細な関数一覧と概要については、[こちら](FUNCTION_SUMMARY.md)をご覧ください。
+各APIの詳細な関数一覧と概要については<a href="FUNCTION_SUMMARY.md" target="_blank">こちら</a>をご覧ください。
 
-GMOコインFX APIの公式ドキュメントは[こちら](https://api.coin.z.com/fxdocs/?python#outline)です。
+GMOコインFX APIの公式ドキュメントは<a href="https://api.coin.z.com/fxdocs/?python#outline" target="_blank">こちら</a>です。
 
 ## 基本的な使い方 (利用例)
 
