@@ -19,7 +19,7 @@ GMOコインFX APIの公式ドキュメントは<a href="https://api.coin.z.com/
 ```python
 import asyncio
 
-from gmo_api import PublicAPI
+from gmo_coin_fx_api import PublicAPI
 
 
 async def main():
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 ```python
 import asyncio
 
-from gmo_api import PrivateAPI
+from gmo_coin_fx_api import PrivateAPI
 
 api_key = "YOUR_API_KEY"
 secret_key = "YOUR_API_SECRET"
