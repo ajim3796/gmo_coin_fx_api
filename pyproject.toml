@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "ajim", email = "n1a1o2k0i@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "niquests",
 ]
