@@ -2,7 +2,7 @@ import asyncio
 import inspect
 import json
 import logging
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 
 import niquests
 from niquests.exceptions import ReadTimeout, RequestException
@@ -42,7 +42,7 @@ class WebsocketAPI:
         self._tasks: list[asyncio.Task] = []
 
         # コールバック管理
-        self._callbacks: Dict[str, Callable[[Dict[str, Any]], Any]] = {}
+        self._callbacks: dict[str, Callable[[dict], Any]] = {}
 
         # 購読リスト (再接続時に再送信するため保持)
         self._public_subscriptions: list[dict] = []

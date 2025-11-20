@@ -69,15 +69,17 @@ GMOコインFXのWebSocket APIにアクセスするためのクラス。
 
 ### メソッド
 
-*   `get_ticker_ws(self, symbol)`
-    *   ティッカー情報のWebSocketストリームを取得します。
-*   `get_executions_ws(self, callback)`
-    *   約定情報のWebSocketストリームを取得します。
-*   `get_orders_ws(self, callback)`
-    *   注文情報のWebSocketストリームを取得します。
-*   `get_positions_ws(self, callback)`
-    *   建玉情報のWebSocketストリームを取得します。
-*   `get_position_summary_ws(self, callback, option: str | None = None)`
-    *   建玉サマリー情報のWebSocketストリームを取得します。
-*   `stop_ws(self)`
-    *   WebSocket接続を停止します。
+*   `start(self) -> None`
+    *   WebSocket接続を開始します（非同期タスクとしてバックグラウンド実行）。
+*   `close(self) -> None`
+    *   WebSocket接続を停止し、リソースを解放します。
+*   `subscribe_ticker(self, symbol: str, callback: Callable[[dict], Any]) -> None`
+    *   ティッカー情報を購読します。
+*   `subscribe_executions(self, callback: Callable[[dict], Any]) -> None`
+    *   約定情報を購読します。
+*   `subscribe_orders(self, callback: Callable[[dict], Any]) -> None`
+    *   注文情報を購読します。
+*   `subscribe_positions(self, callback: Callable[[dict], Any]) -> None`
+    *   建玉情報を購読します。
+*   `subscribe_position_summary(self, callback: Callable[[dict], Any], option: str = "PERIODIC") -> None`
+    *   建玉サマリー情報を購読します。
