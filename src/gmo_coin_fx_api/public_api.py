@@ -4,7 +4,7 @@ import niquests
 
 
 class PublicAPI:
-    BASE_URL = "https://forex-api.coin.z.com/public"
+    end_point = "https://forex-api.coin.z.com/public"
 
     def __init__(self) -> None:
         self.session: niquests.AsyncSession | None = None
@@ -17,11 +17,11 @@ class PublicAPI:
         if self.session:
             await self.session.close()
 
-    async def _request(self, method: str, endpoint: str, params: dict | None = None) -> dict:
+    async def _request(self, path: str, method: str = "GET", params: dict | None = None) -> dict:
         """リクエストの共通処理関数
 
         Args:
-            method (str): GET, POSTなど
+            method (str): 現状`GET`のみ
             endpoint (str): APIのエンドポイント
             params (dict, optional): リクエストパラメータ
 
@@ -32,8 +32,7 @@ class PublicAPI:
         """
         assert self.session is not None, "セッションが初期化されていません。"
         try:
-            path = self.BASE_URL + endpoint
-            response = await self.session.request(method, path, params=params)
+            response = await self.session.request(method, self.end_point + path, params=params)
             response.raise_for_status()
             json_response = response.json()
             if json_response.get("status") == 0:
@@ -61,7 +60,7 @@ class PublicAPI:
         }
         ```
         """
-        response = await self._request("GET", "/v1/status")
+        response = await self._request("/v1/status")
         return response.get("data", {})
 
     async def get_ticker(self) -> list:
@@ -95,7 +94,7 @@ class PublicAPI:
         ]
         ```
         """
-        response = await self._request("GET", "/v1/ticker")
+        response = await self._request("/v1/ticker")
         return response.get("data", [])
 
     async def get_klines(self, symbol: str, price_type: str, interval: str, date: str) -> list:
@@ -141,7 +140,7 @@ class PublicAPI:
             "interval": interval,
             "date": date,
         }
-        response = await self._request("GET", "/v1/klines", params=params)
+        response = await self._request("/v1/klines", params=params)
         return response.get("data", [])
 
     async def get_symbols(self) -> list:
@@ -168,5 +167,5 @@ class PublicAPI:
         ]
         ```
         """
-        response = await self._request("GET", "/v1/symbols")
+        response = await self._request("/v1/symbols")
         return response.get("data", [])

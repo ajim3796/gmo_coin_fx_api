@@ -11,7 +11,7 @@ from .rate_limiter import RateLimiter
 
 
 class PrivateAPI:
-    BASE_URL = "https://forex-api.coin.z.com/private"
+    end_point = "https://forex-api.coin.z.com/private"
     get_api_limiter = RateLimiter(max_calls=6, period=1)
     post_api_limiter = RateLimiter(max_calls=1, period=1)
 
@@ -30,11 +30,11 @@ class PrivateAPI:
         if self.session:
             await self.session.close()
 
-    def _generate_signature(self, timestamp: str, method: str, endpoint: str, req_body: dict | None = None) -> str:
-        if req_body:
-            text = timestamp + method + endpoint + json.dumps(req_body)
+    def _generate_signature(self, timestamp: str, method: str, path: str, req_body: dict | None = None) -> str:
+        if req_body is not None:
+            text = timestamp + method + path + json.dumps(req_body)
         else:
-            text = timestamp + method + endpoint
+            text = timestamp + method + path
         sign = hmac.new(
             bytes(self.secret_key.encode("ascii")),
             bytes(text.encode("ascii")),
@@ -42,9 +42,9 @@ class PrivateAPI:
         ).hexdigest()
         return sign
 
-    def _get_headers(self, method: str, endpoint: str, req_body: dict | None = None) -> dict:
+    def _generate_headers(self, method: str, path: str, req_body: dict | None = None) -> dict:
         timestamp = "{0}000".format(int(time.mktime(datetime.now().timetuple())))
-        sign = self._generate_signature(timestamp, method, endpoint, req_body)
+        sign = self._generate_signature(timestamp, method, path, req_body)
         headers = {
             "API-KEY": self.api_key,
             "API-TIMESTAMP": timestamp,
@@ -55,16 +55,16 @@ class PrivateAPI:
     async def _request(
         self,
         method: str,
-        endpoint: str,
-        params: dict | None = None,
+        path: str,
         headers: dict | None = None,
+        params: dict | None = None,
         req_body: dict | None = None,
     ) -> dict:
         """リクエストの共通処理関数
 
         Args:
             method (str): `GET` `POST` `PUT` `DELETE` など
-            endpoint (str): APIのエンドポイント
+            path (str): APIパス
             params (dict, optional): リクエストパラメータ
             headers (dict, optional): リクエストヘッダー
             req_body (dict, optional): リクエストボディ
@@ -75,15 +75,11 @@ class PrivateAPI:
             Exception: Status Error
         """
         assert self.session is not None, "セッションが初期化されていません。"
-        params = params or {}
-        headers = headers or {}
-        req_body = req_body or {}
         try:
-            path = self.BASE_URL + endpoint
+            if method == "GET":
+                response = await self.session.request(method, self.end_point + path, headers=headers, params=params)
             if method in ["POST", "PUT", "DELETE"]:
-                response = await self.session.request(method, path, json=req_body, headers=headers)
-            else:
-                response = await self.session.request(method, path, params=params, headers=headers)
+                response = await self.session.request(method, self.end_point + path, headers=headers, json=req_body)
             response.raise_for_status()
             json_response = response.json()
             if json_response.get("status") == 0:
@@ -131,9 +127,9 @@ class PrivateAPI:
         """
         await PrivateAPI.get_api_limiter()
         method = "GET"
-        endpoint = "/v1/account/assets"
-        headers = self._get_headers(method, endpoint)
-        response = await self._request(method, endpoint, headers=headers)
+        path = "/v1/account/assets"
+        headers = self._generate_headers(method, path)
+        response = await self._request(method, path, headers=headers)
         return response.get("data", [])
 
     async def get_orders(self, orderId: str | None = None, rootOrderId: str | None = None) -> list:
@@ -201,7 +197,7 @@ class PrivateAPI:
         """
         await PrivateAPI.get_api_limiter()
         method = "GET"
-        endpoint = "/v1/orders"
+        path = "/v1/orders"
         params = {}
         if orderId and rootOrderId:
             raise ValueError("rootOrderId orderId 2つ同時には設定できません。")
@@ -211,8 +207,8 @@ class PrivateAPI:
             params["rootOrderId"] = rootOrderId
         else:
             raise ValueError("rootOrderId orderId いずれか1つが必須です。")
-        headers = self._get_headers(method, endpoint)
-        response = await self._request(method, endpoint, params=params, headers=headers)
+        headers = self._generate_headers(method, path)
+        response = await self._request(method, path, params=params, headers=headers)
         data = response.get("data", {})
         return data.get("list", [])
 
@@ -265,7 +261,7 @@ class PrivateAPI:
         """
         await PrivateAPI.get_api_limiter()
         method = "GET"
-        endpoint = "/v1/activeOrders"
+        path = "/v1/activeOrders"
         params = {}
         if symbol:
             params["symbol"] = symbol
@@ -273,8 +269,8 @@ class PrivateAPI:
             params["prevId"] = prevId
         if count:
             params["count"] = count
-        headers = self._get_headers(method, endpoint)
-        response = await self._request(method, endpoint, params=params, headers=headers)
+        headers = self._generate_headers(method, path)
+        response = await self._request(method, path, params=params, headers=headers)
         data: dict = response.get("data", {})
         return data.get("list", [])
 
@@ -346,7 +342,7 @@ class PrivateAPI:
         """
         await PrivateAPI.get_api_limiter()
         method = "GET"
-        endpoint = "/v1/executions"
+        path = "/v1/executions"
         params = {}
         if orderId and executionId:
             raise ValueError("orderId executionId 2つ同時には設定できません。")
@@ -356,8 +352,8 @@ class PrivateAPI:
             params["executionId"] = executionId
         else:
             raise ValueError("orderId executionId いずれか1つが必須です。")
-        headers = self._get_headers(method, endpoint)
-        response = await self._request(method, endpoint, params=params, headers=headers)
+        headers = self._generate_headers(method, path)
+        response = await self._request(method, path, params=params, headers=headers)
         data: dict = response.get("data", {})
         return data.get("list", [])
 
@@ -409,12 +405,12 @@ class PrivateAPI:
         """
         await PrivateAPI.get_api_limiter()
         method = "GET"
-        endpoint = "/v1/latestExecutions"
+        path = "/v1/latestExecutions"
         params: dict[str, str | int] = {"symbol": symbol}
         if count:
             params["count"] = count
-        headers = self._get_headers(method, endpoint)
-        response = await self._request(method, endpoint, params=params, headers=headers)
+        headers = self._generate_headers(method, path)
+        response = await self._request(method, path, params=params, headers=headers)
         data: dict = response.get("data", {})
         return data.get("list", [])
 
@@ -459,7 +455,7 @@ class PrivateAPI:
         """
         await PrivateAPI.get_api_limiter()
         method = "GET"
-        endpoint = "/v1/openPositions"
+        path = "/v1/openPositions"
         params = {}
         if symbol:
             params["symbol"] = symbol
@@ -467,8 +463,8 @@ class PrivateAPI:
             params["prevId"] = prevId
         if count:
             params["count"] = count
-        headers = self._get_headers(method, endpoint)
-        response = await self._request(method, endpoint, params=params, headers=headers)
+        headers = self._generate_headers(method, path)
+        response = await self._request(method, path, params=params, headers=headers)
         data: dict = response.get("data", {})
         return data.get("list", [])
 
@@ -514,12 +510,12 @@ class PrivateAPI:
         """
         await PrivateAPI.get_api_limiter()
         method = "GET"
-        endpoint = "/v1/positionSummary"
+        path = "/v1/positionSummary"
         params = {}
         if symbol:
             params["symbol"] = symbol
-        headers = self._get_headers(method, endpoint)
-        response = await self._request(method, endpoint, params=params, headers=headers)
+        headers = self._generate_headers(method, path)
+        response = await self._request(method, path, params=params, headers=headers)
         data: dict = response.get("data", {})
         return data.get("list", [])
 
@@ -580,7 +576,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/speedOrder"
+        path = "/v1/speedOrder"
         req_body = {
             "symbol": symbol,
             "side": side,
@@ -593,8 +589,8 @@ class PrivateAPI:
             req_body["lowerBound"] = lowerBound
         if upperBound:
             req_body["upperBound"] = upperBound
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", [])
 
     async def order(
@@ -652,7 +648,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/order"
+        path = "/v1/order"
         req_body = {
             "symbol": symbol,
             "side": side,
@@ -674,8 +670,8 @@ class PrivateAPI:
                 req_body["lowerBound"] = lowerBound
             elif side == "BUY" and upperBound:
                 req_body["upperBound"] = upperBound
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", [])
 
     async def ifd_order(
@@ -756,7 +752,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/ifdOrder"
+        path = "/v1/ifdOrder"
         req_body = {
             "symbol": symbol,
             "firstSide": firstSide,
@@ -769,8 +765,8 @@ class PrivateAPI:
         }
         if clientOrderId:
             req_body["clientOrderId"] = clientOrderId
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", [])
 
     async def ifo_order(
@@ -865,7 +861,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/ifoOrder"
+        path = "/v1/ifoOrder"
         req_body = {
             "symbol": symbol,
             "firstSide": firstSide,
@@ -880,8 +876,8 @@ class PrivateAPI:
             req_body["secondStopPrice"] = secondStopPrice
         if clientOrderId:
             req_body["clientOrderId"] = clientOrderId
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", [])
 
     async def change_order(self, price: str, orderId: str | None = None, clientOrderId: str | None = None) -> list:
@@ -935,7 +931,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/changeOrder"
+        path = "/v1/changeOrder"
         req_body = {"price": price}
         if orderId and clientOrderId:
             raise ValueError("orderId clientOrderId 2つ同時には設定できません。")
@@ -945,8 +941,8 @@ class PrivateAPI:
             req_body["clientOrderId"] = clientOrderId
         else:
             raise ValueError("orderId clientOrderId いずれか1つが必須です。")
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", [])
 
     async def change_oco_order(
@@ -1025,7 +1021,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/changeOcoOrder"
+        path = "/v1/changeOcoOrder"
         req_body = {}
         if rootOrderId and clientOrderId:
             raise ValueError("rootOrderId clientOrderId 2つ同時には設定できません。")
@@ -1041,8 +1037,8 @@ class PrivateAPI:
             req_body["limitPrice"] = limitPrice
         if stopPrice:
             req_body["stopPrice"] = stopPrice
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", [])
 
     async def change_ifd_order(
@@ -1119,7 +1115,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/changeIfdOrder"
+        path = "/v1/changeIfdOrder"
         req_body = {}
         if rootOrderId and clientOrderId:
             raise ValueError("rootOrderId clientOrderId 2つ同時には設定できません。")
@@ -1135,8 +1131,8 @@ class PrivateAPI:
             req_body["firstPrice"] = firstPrice
         if secondPrice:
             req_body["secondPrice"] = secondPrice
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", [])
 
     async def change_ifo_order(
@@ -1231,7 +1227,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/changeIfoOrder"
+        path = "/v1/changeIfoOrder"
         req_body = {}
 
         if rootOrderId and clientOrderId:
@@ -1250,8 +1246,8 @@ class PrivateAPI:
             req_body["secondLimitPrice"] = secondLimitPrice
         if secondStopPrice:
             req_body["secondStopPrice"] = secondStopPrice
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", [])
 
     async def cancel_orders(
@@ -1285,7 +1281,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/cancelOrders"
+        path = "/v1/cancelOrders"
         req_body = {}
         if rootOrderIds and clientOrderIds:
             raise ValueError("rootOrderIds clientOrderIds 2つ同時には設定できません。")
@@ -1295,8 +1291,8 @@ class PrivateAPI:
             req_body["clientOrderIds"] = clientOrderIds
         else:
             raise ValueError("rootOrderIds clientOrderIds いずれか1つが必須です。")
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         data: dict = response.get("data", {})
         return data.get("success", [])
 
@@ -1328,14 +1324,14 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/cancelBulkOrder"
+        path = "/v1/cancelBulkOrder"
         req_body: dict[str, list[str] | str] = {"symbols": symbols}
         if side:
             req_body["side"] = side
         if settleType:
             req_body["settleType"] = settleType
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         data: dict = response.get("data", {})
         return data.get("success", [])
 
@@ -1412,7 +1408,7 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/closeOrder"
+        path = "/v1/closeOrder"
         req_body: dict[str, str | list[dict]] = {
             "symbol": symbol,
             "side": side,
@@ -1441,10 +1437,11 @@ class PrivateAPI:
                 req_body["lowerBound"] = lowerBound
             elif side == "BUY" and upperBound:
                 req_body["upperBound"] = upperBound
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", [])
 
+    ##### WebSocket Token API #####
     async def get_ws_token(self) -> str:
         """Private WebSocket API用のアクセストークンを取得します。有効期限は60分です。アクセストークンは最大5個まで発行できます。発行上限を超えた場合、有効期限の近いトークンから順に削除されます。発行済みのAPIキーを使ってアクセストークンを取得する場合、【会員ページ】-【API】-【編集】-【APIキーの編集】画面で「約定情報通知(WebSocket)」、「注文情報通知(WebSocket)」、「ポジション情報通知(WebSocket)」または「ポジションサマリー情報通知(WebSocket)」にチェックを入れてから、アクセストークンを取得します。※APIキーの権限を編集する前に取得したアクセストークンには、編集後の権限設定は反映されませんので、ご注意ください。
 
@@ -1458,10 +1455,10 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "POST"
-        endpoint = "/v1/ws-auth"
+        path = "/v1/ws-auth"
         req_body = {}
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response.get("data", "")
 
     async def extend_ws_token(self, token: str) -> dict:
@@ -1483,10 +1480,10 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "PUT"
-        endpoint = "/v1/ws-auth"
+        path = "/v1/ws-auth"
         req_body = {"token": token}
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response
 
     async def delete_ws_token(self, token: str) -> dict:
@@ -1508,8 +1505,8 @@ class PrivateAPI:
         """
         await PrivateAPI.post_api_limiter()
         method = "DELETE"
-        endpoint = "/v1/ws-auth"
+        path = "/v1/ws-auth"
         req_body = {"token": token}
-        headers = self._get_headers(method, endpoint, req_body)
-        response = await self._request(method, endpoint, headers=headers, req_body=req_body)
+        headers = self._generate_headers(method, path, req_body)
+        response = await self._request(method, path, headers=headers, req_body=req_body)
         return response
