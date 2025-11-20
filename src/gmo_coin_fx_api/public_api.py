@@ -37,12 +37,11 @@ class PublicAPI:
             response.raise_for_status()
             json_response = response.json()
             if json_response.get("status") == 0:
+                return json_response
+            else:
                 raise Exception(
                     f"Status Error: status={json_response.get('status')}, message={json_response.get('messages', 'Unknown error')}"
                 )
-            elif json_response.get("data") is None:
-                raise ValueError("API response did not contain 'data'.")
-            return json_response
         except niquests.exceptions.JSONDecodeError:
             raise Exception("JSON Decode Error: Invalid JSON response")
         except niquests.exceptions.RequestException as e:
