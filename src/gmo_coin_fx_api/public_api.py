@@ -17,7 +17,7 @@ class PublicAPI:
         if self.session:
             await self.session.close()
 
-    async def _request(self, path: str, method: str = "GET", params: dict | None = None) -> dict:
+    async def _request(self, method: str, path: str, params: dict | None = None) -> dict:
         """リクエストの共通処理関数
 
         Args:
@@ -60,7 +60,7 @@ class PublicAPI:
         }
         ```
         """
-        response = await self._request("/v1/status")
+        response = await self._request("GET", "/v1/status")
         return response.get("data", {})
 
     async def get_ticker(self) -> list:
@@ -94,7 +94,7 @@ class PublicAPI:
         ]
         ```
         """
-        response = await self._request("/v1/ticker")
+        response = await self._request("GET", "/v1/ticker")
         return response.get("data", [])
 
     async def get_klines(self, symbol: str, price_type: str, interval: str, date: str) -> list:
@@ -140,7 +140,7 @@ class PublicAPI:
             "interval": interval,
             "date": date,
         }
-        response = await self._request("/v1/klines", params=params)
+        response = await self._request("GET", "/v1/klines", params=params)
         return response.get("data", [])
 
     async def get_symbols(self) -> list:
@@ -167,5 +167,5 @@ class PublicAPI:
         ]
         ```
         """
-        response = await self._request("/v1/symbols")
+        response = await self._request("GET", "/v1/symbols")
         return response.get("data", [])
