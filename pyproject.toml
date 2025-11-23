@@ -3,13 +3,28 @@ name = "gmo-coin-fx-api"
 version = "0.2.0"
 description = "GMOコイン外国為替FX APIクライアント"
 readme = "README.md"
+license = { file = "LICENSE" }
 authors = [
     { name = "ajim", email = "n1a1o2k0i@gmail.com" }
 ]
 requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["gmo", "coin", "fx", "api", "trading", "crypto", "bitcoin"]
 dependencies = [
     "niquests[full]",
 ]
+urls = { Repository = "https://github.com/ajim3796/gmo-coin-fx-api", Issues = "https://github.com/ajim3796/gmo-coin-fx-api/issues" }
 
 [build-system]
 requires = ["uv_build>=0.9.9,<0.10.0"]
